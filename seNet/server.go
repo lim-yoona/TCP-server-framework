@@ -58,9 +58,9 @@ func (s *Server) Start() {
 					num, err := conn.Read(buf)
 					if err != nil {
 						log.Println("Read err", err)
-						continue
+						return
 					}
-					_, err = conn.Write(buf[:num])
+					num, err = conn.Write(buf[:num])
 					if err != nil {
 						log.Println("Write err", err)
 						continue
