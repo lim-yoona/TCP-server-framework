@@ -14,8 +14,5 @@ type IConnection interface {
 	// gain remote client status
 	RemoteAddr() net.Addr
 	// send data to remote client
-	Send([]byte) error
+	SendMsg(uint32, []byte) error
 }
-
-// define a function to deal with the conn work
-type HandleFunc func(*net.TCPConn, []byte, int) error

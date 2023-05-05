@@ -2,8 +2,9 @@ package seNet
 
 import (
 	"TCP-server-framework/seInterface"
-	"TCP-server-framework/utils"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 )
@@ -33,17 +34,32 @@ func (c *Connection) StartReader() {
 	defer fmt.Println("ConnID=", c.ConnID, "Reader Existed RemoteAddr is", c.Conn.RemoteAddr().String())
 	defer c.Stop()
 	for {
-		// 读取客户端输入到buf中
-		buf := make([]byte, utils.GlobalObject.MaxPackageSize)
-		_, err := c.Conn.Read(buf)
+		// 读取客户端输入到msg中
+		dp := NewDataPack()
+		headData := make([]byte, dp.GetHeadLen())
+		_, err := io.ReadFull(c.Conn, headData)
 		if err != nil {
-			log.Println("Reader Goroutine Read err", err)
+			log.Println("ReadFull err", err)
 			return
+		}
+		msg, err := dp.UnPack(headData)
+		if err != nil {
+			log.Println("UnPack err", err)
+			return
+		}
+		if msg.GetMesLen() > 0 {
+			msge := msg.(*Message)
+			msge.Data = make([]byte, msge.GetMesLen())
+			_, err := io.ReadFull(c.Conn, msge.Data)
+			if err != nil {
+				log.Println("ReadFull err", err)
+				return
+			}
 		}
 		// 得到当前链接的请求数据
 		req := &Request{
 			conn: c,
-			data: buf,
+			msg:  msg,
 		}
 		// 从路由中，找到注册绑定的Conn对应的Router调用
 		go func(request *Request) {
@@ -58,6 +74,24 @@ func (c *Connection) Start() {
 	fmt.Println("Conn started  ConnID=", c.ConnID)
 	go c.StartReader()
 	//TODO 启动从当前链接写数据的业务
+}
+
+func (c *Connection) SendMsg(MsgId uint32, data []byte) error {
+	if c.IsClose == true {
+		return errors.New("Connection Closed when send message")
+	}
+	dp := NewDataPack()
+	msg := NewMessage(MsgId, data)
+	sendmsg, err := dp.Pack(msg)
+	if err != nil {
+		log.Println("Pack err", err)
+		return err
+	}
+	if _, err := c.Conn.Write(sendmsg); err != nil {
+		log.Println("Write err", err)
+		return err
+	}
+	return nil
 }
 
 // stop conn
@@ -84,9 +118,4 @@ func (c *Connection) GetConnID() uint32 {
 // gain remote client status
 func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
-}
-
-// send data to remote client
-func (c *Connection) Send([]byte) error {
-	return nil
 }

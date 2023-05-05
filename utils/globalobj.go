@@ -54,7 +54,7 @@ func init() {
 	GlobalObject = &GlobalObj{
 		Name:           "TCPServerApp",
 		TcpPort:        8999,
-		Version:        "V0.4",
+		Version:        "V0.5",
 		MaxConn:        10000,
 		MaxPackageSize: 4096,
 		Host:           "0.0.0.0",
