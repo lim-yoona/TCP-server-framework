@@ -2,6 +2,7 @@ package seNet
 
 import (
 	"TCP-server-framework/seInterface"
+	"TCP-server-framework/utils"
 	"fmt"
 	"log"
 	"net"
@@ -13,22 +14,32 @@ type Server struct {
 	IpVersion string
 	Ip        string
 	Port      int
+	// 路由，服务器注册的链接对应的处理业务，目前只能绑定一个router
+	Router seInterface.IRouter
 }
 
 // init server
-func NewServer(name string) seInterface.IServer {
+func NewServer() seInterface.IServer {
 	return &Server{
-		Name:      name,
+		Name:      utils.GlobalObject.Name,
 		IpVersion: "tcp4",
-		Ip:        "0.0.0.0",
-		Port:      8999,
+		Ip:        utils.GlobalObject.Host,
+		Port:      utils.GlobalObject.TcpPort,
+		Router:    nil,
 	}
+}
+
+func (s *Server) AddRouter(router seInterface.IRouter) {
+	s.Router = router
+	fmt.Println("AddRouter succeed!")
 }
 
 // server start
 func (s *Server) Start() {
-	fmt.Printf("[Start] Server Listener at %s:%d is started!", s.Ip, s.Port)
-
+	fmt.Printf("[TCPServer] Start! ServerName:%s Listener at %s:%d is started!\n",
+		utils.GlobalObject.Name, utils.GlobalObject.Host, utils.GlobalObject.TcpPort)
+	fmt.Printf("[TCPServer] Version:%s MaxConn:%d MaxPackageSize:%d\n",
+		utils.GlobalObject.Version, utils.GlobalObject.MaxConn, utils.GlobalObject.MaxPackageSize)
 	// 放到一个goroutine中来做，这样主进程就不会阻塞，异步
 	go func() {
 		// 1.获取一个TCP的Addr，也就是套接字
@@ -44,6 +55,10 @@ func (s *Server) Start() {
 			return
 		}
 		fmt.Println("[Start succeed!]", s.Name, "succeed,listening...")
+
+		// ConnID
+		var ConnId uint32
+		ConnId = 0
 		// 3.连接到了之后Accept得到链接
 		for {
 			conn, err := listener.AcceptTCP()
@@ -51,23 +66,9 @@ func (s *Server) Start() {
 				log.Println("AcceptTCP err", err)
 				continue
 			}
-			// 先处理一个简单的业务
-			go func() {
-				for {
-					buf := make([]byte, 512)
-					num, err := conn.Read(buf)
-					if err != nil {
-						log.Println("Read err", err)
-						return
-					}
-					num, err = conn.Write(buf[:num])
-					if err != nil {
-						log.Println("Write err", err)
-						continue
-					}
-					fmt.Println("[Return] Writer back succeed!")
-				}
-			}()
+			Connect := NewConnection(conn, ConnId, s.Router)
+			ConnId++
+			go Connect.Start()
 		}
 	}()
 

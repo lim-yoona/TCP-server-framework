@@ -2,27 +2,29 @@ package seNet
 
 import (
 	"TCP-server-framework/seInterface"
+	"TCP-server-framework/utils"
 	"fmt"
 	"log"
 	"net"
 )
 
 type Connection struct {
-	Conn      *net.TCPConn
-	ConnID    uint32
-	IsClose   bool
-	HandleAPI seInterface.HandleFunc
-	ExitChan  chan bool
+	Conn     *net.TCPConn
+	ConnID   uint32
+	IsClose  bool
+	ExitChan chan bool
+	// 链接处理的方法
+	Router seInterface.IRouter
 }
 
 // init Connection section
-func NewConnection(conn *net.TCPConn, connId uint32, callBackFunc seInterface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, connId uint32, router seInterface.IRouter) *Connection {
 	return &Connection{
-		Conn:      conn,
-		ConnID:    connId,
-		HandleAPI: callBackFunc,
-		IsClose:   false,
-		ExitChan:  make(chan bool, 1),
+		Conn:     conn,
+		ConnID:   connId,
+		IsClose:  false,
+		ExitChan: make(chan bool, 1),
+		Router:   router,
 	}
 }
 
@@ -32,17 +34,23 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 	for {
 		// 读取客户端输入到buf中
-		buf := make([]byte, 512)
-		num, err := c.Conn.Read(buf)
+		buf := make([]byte, utils.GlobalObject.MaxPackageSize)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			log.Println("Reader Goroutine Read err", err)
 			return
 		}
-		if err = c.HandleAPI(c.Conn, buf, num); err != nil {
-			log.Println("ConnID=", c.ConnID, " HandleAPI err", err)
-			return
+		// 得到当前链接的请求数据
+		req := &Request{
+			conn: c,
+			data: buf,
 		}
-
+		// 从路由中，找到注册绑定的Conn对应的Router调用
+		go func(request *Request) {
+			c.Router.PreHandle(req)
+			c.Router.Handle(req)
+			c.Router.PostHandle(req)
+		}(req)
 	}
 }
 
@@ -80,5 +88,5 @@ func (c *Connection) RemoteAddr() net.Addr {
 
 // send data to remote client
 func (c *Connection) Send([]byte) error {
-
+	return nil
 }
