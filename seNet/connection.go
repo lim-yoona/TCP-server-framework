@@ -10,10 +10,11 @@ import (
 )
 
 type Connection struct {
-	Conn     *net.TCPConn
-	ConnID   uint32
-	IsClose  bool
-	ExitChan chan bool
+	TCPServer seInterface.IServer
+	Conn      *net.TCPConn
+	ConnID    uint32
+	IsClose   bool
+	ExitChan  chan bool
 	// 无缓冲channel，用于读写之间的消息通信
 	msgChan chan []byte
 	// 链接处理模块
@@ -21,8 +22,9 @@ type Connection struct {
 }
 
 // init Connection section
-func NewConnection(conn *net.TCPConn, connId uint32, handle seInterface.IMsgHandle) *Connection {
-	return &Connection{
+func NewConnection(TCPServer seInterface.IServer, conn *net.TCPConn, connId uint32, handle seInterface.IMsgHandle) *Connection {
+	c := &Connection{
+		TCPServer: TCPServer,
 		Conn:      conn,
 		ConnID:    connId,
 		IsClose:   false,
@@ -30,6 +32,8 @@ func NewConnection(conn *net.TCPConn, connId uint32, handle seInterface.IMsgHand
 		ExitChan:  make(chan bool, 1),
 		MsgHandle: handle,
 	}
+	TCPServer.GetConnMan().AddConn(c)
+	return c
 }
 
 func (c *Connection) StartReader() {
@@ -119,6 +123,7 @@ func (c *Connection) Stop() {
 	c.IsClose = true
 	c.Conn.Close()
 	c.ExitChan <- true
+	c.TCPServer.GetConnMan().DeleteConn(c)
 	close(c.ExitChan)
 	close(c.msgChan)
 }

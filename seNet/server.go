@@ -15,17 +15,19 @@ type Server struct {
 	Ip        string
 	Port      int
 	// 路由，服务器注册的链接对应的处理业务
-	MsgHandler seInterface.IMsgHandle
+	MsgHandler  seInterface.IMsgHandle
+	ConnManager seInterface.IConnManager
 }
 
 // init server
 func NewServer() seInterface.IServer {
 	return &Server{
-		Name:       utils.GlobalObject.Name,
-		IpVersion:  "tcp4",
-		Ip:         utils.GlobalObject.Host,
-		Port:       utils.GlobalObject.TcpPort,
-		MsgHandler: NewMsgHandle(),
+		Name:        utils.GlobalObject.Name,
+		IpVersion:   "tcp4",
+		Ip:          utils.GlobalObject.Host,
+		Port:        utils.GlobalObject.TcpPort,
+		MsgHandler:  NewMsgHandle(),
+		ConnManager: NewConnManager(),
 	}
 }
 
@@ -68,7 +70,15 @@ func (s *Server) Start() {
 				log.Println("AcceptTCP err", err)
 				continue
 			}
-			Connect := NewConnection(conn, ConnId, s.MsgHandler)
+			// 判断是否超过了最大连接个数
+			if s.ConnManager.GetConnNum() == utils.GlobalObject.MaxConn {
+				//TODO 给客户端响应一个超出最大连接的错误包
+				fmt.Printf("Out of MAXConnNum")
+				conn.Close()
+				continue
+			}
+			fmt.Println("GetConnNum()=", s.ConnManager.GetConnNum())
+			Connect := NewConnection(s, conn, ConnId, s.MsgHandler)
 			ConnId++
 			go Connect.Start()
 		}
@@ -79,6 +89,8 @@ func (s *Server) Start() {
 // server stop
 func (s *Server) Stop() {
 	//TODO 将一些服务器的资源、状态或者一些已经开辟的链接信息 进行停止或者回收
+	s.ConnManager.ClearConn()
+	fmt.Println("[Stop] TCPServer Framwork! Name=", s.Name)
 }
 
 // server run
@@ -87,4 +99,7 @@ func (s *Server) Serve() {
 
 	//TODO 可以做一些启动服务器之后的额外业务
 	select {}
+}
+func (s *Server) GetConnMan() seInterface.IConnManager {
+	return s.ConnManager
 }
