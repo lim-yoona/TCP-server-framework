@@ -14,23 +14,26 @@ type Connection struct {
 	ConnID   uint32
 	IsClose  bool
 	ExitChan chan bool
-	// 链接处理的方法
-	Router seInterface.IRouter
+	// 无缓冲channel，用于读写之间的消息通信
+	msgChan chan []byte
+	// 链接处理模块
+	MsgHandle seInterface.IMsgHandle
 }
 
 // init Connection section
-func NewConnection(conn *net.TCPConn, connId uint32, router seInterface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, connId uint32, handle seInterface.IMsgHandle) *Connection {
 	return &Connection{
-		Conn:     conn,
-		ConnID:   connId,
-		IsClose:  false,
-		ExitChan: make(chan bool, 1),
-		Router:   router,
+		Conn:      conn,
+		ConnID:    connId,
+		IsClose:   false,
+		msgChan:   make(chan []byte),
+		ExitChan:  make(chan bool, 1),
+		MsgHandle: handle,
 	}
 }
 
 func (c *Connection) StartReader() {
-	fmt.Println("Reader Goroutine is running...")
+	fmt.Println("[Reader Goroutine is running...]")
 	defer fmt.Println("ConnID=", c.ConnID, "Reader Existed RemoteAddr is", c.Conn.RemoteAddr().String())
 	defer c.Stop()
 	for {
@@ -63,17 +66,35 @@ func (c *Connection) StartReader() {
 		}
 		// 从路由中，找到注册绑定的Conn对应的Router调用
 		go func(request *Request) {
-			c.Router.PreHandle(req)
-			c.Router.Handle(req)
-			c.Router.PostHandle(req)
+			c.MsgHandle.DoMsgHandle(request)
 		}(req)
+	}
+}
+
+func (c *Connection) StartWriter() {
+	fmt.Println("[Writer Goroutine is running...]")
+	defer fmt.Println(c.RemoteAddr().String(), "[conn Writer exit!###########]")
+	for {
+		select {
+		case data := <-c.msgChan:
+			if _, err := c.Conn.Write(data); err != nil {
+				log.Println("Send data err", err)
+				return
+			}
+			fmt.Println("[Writer send data succeed!]", data)
+		// raeder告知writer客户端已经退出
+		case <-c.ExitChan:
+			fmt.Println("writer receive ExitChan")
+			return
+		}
 	}
 }
 
 func (c *Connection) Start() {
 	fmt.Println("Conn started  ConnID=", c.ConnID)
 	go c.StartReader()
-	//TODO 启动从当前链接写数据的业务
+	// 启动写数据的goroutine
+	go c.StartWriter()
 }
 
 func (c *Connection) SendMsg(MsgId uint32, data []byte) error {
@@ -87,22 +108,21 @@ func (c *Connection) SendMsg(MsgId uint32, data []byte) error {
 		log.Println("Pack err", err)
 		return err
 	}
-	if _, err := c.Conn.Write(sendmsg); err != nil {
-		log.Println("Write err", err)
-		return err
-	}
+	c.msgChan <- sendmsg
 	return nil
 }
 
 // stop conn
 func (c *Connection) Stop() {
 	fmt.Println("Conn Closeed  ConnID=", c.ConnID)
-	if !c.IsClose {
+	if c.IsClose == true {
 		return
 	}
 	c.IsClose = true
 	c.Conn.Close()
+	c.ExitChan <- true
 	close(c.ExitChan)
+	close(c.msgChan)
 }
 
 // gain socket

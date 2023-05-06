@@ -14,23 +14,23 @@ type Server struct {
 	IpVersion string
 	Ip        string
 	Port      int
-	// 路由，服务器注册的链接对应的处理业务，目前只能绑定一个router
-	Router seInterface.IRouter
+	// 路由，服务器注册的链接对应的处理业务
+	MsgHandler seInterface.IMsgHandle
 }
 
 // init server
 func NewServer() seInterface.IServer {
 	return &Server{
-		Name:      utils.GlobalObject.Name,
-		IpVersion: "tcp4",
-		Ip:        utils.GlobalObject.Host,
-		Port:      utils.GlobalObject.TcpPort,
-		Router:    nil,
+		Name:       utils.GlobalObject.Name,
+		IpVersion:  "tcp4",
+		Ip:         utils.GlobalObject.Host,
+		Port:       utils.GlobalObject.TcpPort,
+		MsgHandler: NewMsgHandle(),
 	}
 }
 
-func (s *Server) AddRouter(router seInterface.IRouter) {
-	s.Router = router
+func (s *Server) AddRouter(msgId uint32, router seInterface.IRouter) {
+	s.MsgHandler.AddRouter(msgId, router)
 	fmt.Println("AddRouter succeed!")
 }
 
@@ -66,7 +66,7 @@ func (s *Server) Start() {
 				log.Println("AcceptTCP err", err)
 				continue
 			}
-			Connect := NewConnection(conn, ConnId, s.Router)
+			Connect := NewConnection(conn, ConnId, s.MsgHandler)
 			ConnId++
 			go Connect.Start()
 		}
