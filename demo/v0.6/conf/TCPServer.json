@@ -4,5 +4,6 @@
   "Name": "TCPServer V0.5 App",
   "Version": "V0.6",
   "MaxConn": 1000,
-  "MaxPackageSize": 2048
+  "MaxPackageSize": 2048,
+  "WorkPoolSize": 32
 }

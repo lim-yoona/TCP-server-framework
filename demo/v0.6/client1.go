@@ -49,6 +49,6 @@ func main() {
 		}
 		fmt.Println("Receive message MsgId:", msg.GetMesId(), "MsgLen:", msg.GetMesLen(),
 			"MsgData:", string(msg.GetMesData()))
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 5)
 	}
 }

@@ -42,6 +42,8 @@ func (s *Server) Start() {
 		utils.GlobalObject.Version, utils.GlobalObject.MaxConn, utils.GlobalObject.MaxPackageSize)
 	// 放到一个goroutine中来做，这样主进程就不会阻塞，异步
 	go func() {
+		// 开启工作池
+		s.MsgHandler.StartWorkerPool()
 		// 1.获取一个TCP的Addr，也就是套接字
 		addr, err := net.ResolveTCPAddr(s.IpVersion, fmt.Sprintf("%s:%d", s.Ip, s.Port))
 		if err != nil {

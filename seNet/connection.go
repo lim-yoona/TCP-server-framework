@@ -65,9 +65,7 @@ func (c *Connection) StartReader() {
 			msg:  msg,
 		}
 		// 从路由中，找到注册绑定的Conn对应的Router调用
-		go func(request *Request) {
-			c.MsgHandle.DoMsgHandle(request)
-		}(req)
+		c.MsgHandle.SendMsgToTaskQueue(req)
 	}
 }
 

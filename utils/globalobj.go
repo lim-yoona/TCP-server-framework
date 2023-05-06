@@ -24,6 +24,9 @@ type GlobalObj struct {
 	MaxConn int
 	// 最大包大小
 	MaxPackageSize uint32
+	WorkerPoolSize uint32
+	// 每个worker对应的channel中可以存放的最大消息数量
+	MaxWorkerTaskLen uint32
 }
 
 // 定义一个全局的对象
@@ -52,12 +55,14 @@ func (g *GlobalObj) LoadConf() {
 func init() {
 	// 如果配置文件没有加载，默认的值
 	GlobalObject = &GlobalObj{
-		Name:           "TCPServerApp",
-		TcpPort:        8999,
-		Version:        "V0.5",
-		MaxConn:        10000,
-		MaxPackageSize: 4096,
-		Host:           "0.0.0.0",
+		Name:             "TCPServerApp",
+		TcpPort:          8999,
+		Version:          "V0.5",
+		MaxConn:          10000,
+		MaxPackageSize:   4096,
+		Host:             "0.0.0.0",
+		WorkerPoolSize:   32,
+		MaxWorkerTaskLen: 1024,
 	}
 	GlobalObject.LoadConf()
 }
