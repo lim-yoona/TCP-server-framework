@@ -1,0 +1,9 @@
+{
+  "Host": "127.0.0.1",
+  "TcpPort": 8999,
+  "Name": "TCPServer V0.5 App",
+  "Version": "V0.6",
+  "MaxConn": 2,
+  "MaxPackageSize": 2048,
+  "WorkPoolSize": 32
+}

@@ -17,6 +17,8 @@ type Server struct {
 	// 路由，服务器注册的链接对应的处理业务
 	MsgHandler  seInterface.IMsgHandle
 	ConnManager seInterface.IConnManager
+	OnConnStart func(conn seInterface.IConnection)
+	OnConnStop  func(conn seInterface.IConnection)
 }
 
 // init server
@@ -102,4 +104,23 @@ func (s *Server) Serve() {
 }
 func (s *Server) GetConnMan() seInterface.IConnManager {
 	return s.ConnManager
+}
+
+func (s *Server) SetOnConnStart(hookFunc func(conn seInterface.IConnection)) {
+	s.OnConnStart = hookFunc
+}
+func (s *Server) SetOnConnStop(hookFunc func(conn seInterface.IConnection)) {
+	s.OnConnStop = hookFunc
+}
+func (s *Server) CallOnConnStart(conn seInterface.IConnection) {
+	if s.OnConnStart != nil {
+		fmt.Println("OnConnStart Called!")
+		s.OnConnStart(conn)
+	}
+}
+func (s *Server) CallOnConnStop(conn seInterface.IConnection) {
+	if s.OnConnStop != nil {
+		fmt.Println("OnConnStop Called!")
+		s.OnConnStop(conn)
+	}
 }

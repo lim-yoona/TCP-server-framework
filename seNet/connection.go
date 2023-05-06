@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 type Connection struct {
@@ -19,6 +20,10 @@ type Connection struct {
 	msgChan chan []byte
 	// 链接处理模块
 	MsgHandle seInterface.IMsgHandle
+	// 给链接增加属性
+	property map[string]interface{}
+	// 保护属性map的锁
+	pLock sync.RWMutex
 }
 
 // init Connection section
@@ -31,6 +36,7 @@ func NewConnection(TCPServer seInterface.IServer, conn *net.TCPConn, connId uint
 		msgChan:   make(chan []byte),
 		ExitChan:  make(chan bool, 1),
 		MsgHandle: handle,
+		property:  make(map[string]interface{}),
 	}
 	TCPServer.GetConnMan().AddConn(c)
 	return c
@@ -97,6 +103,8 @@ func (c *Connection) Start() {
 	go c.StartReader()
 	// 启动写数据的goroutine
 	go c.StartWriter()
+	// 调用OnConnStart函数
+	c.TCPServer.CallOnConnStart(c)
 }
 
 func (c *Connection) SendMsg(MsgId uint32, data []byte) error {
@@ -121,6 +129,9 @@ func (c *Connection) Stop() {
 		return
 	}
 	c.IsClose = true
+
+	// 调用OnConnStop函数
+	c.TCPServer.CallOnConnStop(c)
 	c.Conn.Close()
 	c.ExitChan <- true
 	c.TCPServer.GetConnMan().DeleteConn(c)
@@ -141,4 +152,36 @@ func (c *Connection) GetConnID() uint32 {
 // gain remote client status
 func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
+}
+
+// 设置链接属性
+func (c *Connection) SetProperty(k string, v interface{}) {
+	c.pLock.Lock()
+	defer c.pLock.Unlock()
+	c.property[k] = v
+}
+
+// 获得链接属性
+func (c *Connection) GetProperty(k string) (interface{}, error) {
+	c.pLock.RLock()
+	defer c.pLock.RUnlock()
+	p, ok := c.property[k]
+	if ok {
+		return p, nil
+	} else {
+		fmt.Println("GetProperty k=", k, "err")
+		return nil, errors.New("GetProperty err")
+	}
+}
+
+// 删除链接属性
+func (c *Connection) DeleteProperty(k string) {
+	c.pLock.Lock()
+	defer c.pLock.Unlock()
+	_, ok := c.property[k]
+	if ok {
+		delete(c.property, k)
+	} else {
+		fmt.Println("DeleteProperty err No property k=", k)
+	}
 }
