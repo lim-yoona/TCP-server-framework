@@ -7,7 +7,7 @@ The TCP server framework is a TCP based lightweight server framework that can he
 
 ## Architecture  
 
-[![Architecture](https://s11.ax1x.com/2024/02/17/pFJ95Ix.md.png)](https://imgse.com/i/pFJ95Ix)  
+[![Architecture](https://s11.ax1x.com/2024/02/17/pFJ95Ix.png)](https://imgse.com/i/pFJ95Ix)  
 
 ## Feature
 

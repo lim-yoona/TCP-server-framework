@@ -7,7 +7,7 @@ TCP server framework是一个基于TCP的轻量级服务器框架，支持高并
 
 ## 架构
 
-[![架构](https://s11.ax1x.com/2024/02/17/pFJZbS1.md.png)](https://imgse.com/i/pFJZbS1)  
+[![架构](https://s11.ax1x.com/2024/02/17/pFJZbS1.png)](https://imgse.com/i/pFJZbS1)  
 
 ## 特性
 
