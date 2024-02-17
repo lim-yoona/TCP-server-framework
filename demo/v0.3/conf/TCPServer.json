@@ -1,8 +1,0 @@
-{
-  "Host": "127.0.0.1",
-  "TcpPort": 8999,
-  "Name": "TCPServer V0.4 App",
-  "Version": "V0.4",
-  "MaxConn": 1000,
-  "MaxPackageSize": 2048
-}

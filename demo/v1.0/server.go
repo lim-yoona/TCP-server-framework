@@ -71,7 +71,7 @@ func main() {
 	// 注册Hook函数
 	s.SetOnConnStart(ConnBegin)
 	s.SetOnConnStop(ConnEnd)
-	// 这个版本需要添加路由了
+	// 注册路由
 	s.AddRouter(0, &PingRouter{})
 	s.AddRouter(1, &HelloRouter{})
 	// 2.启动server
